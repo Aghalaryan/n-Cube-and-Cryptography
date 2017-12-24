@@ -1,0 +1,248 @@
+#include <iostream>
+#include <cmath>
+using namespace std;
+
+struct UnitCube {
+	const int N;
+	const int n;
+	const int k;
+	short** Cube;
+	UnitCube(int N_, int n_, int k_) : N(N_), n(n_), k(k_)
+	{
+		Cube = new short*[N];
+		for (int i = 0; i < N; i++) {
+			Cube[i] = new short[n];
+		}
+	}
+	~UnitCube() {
+		for (int i = 0; i < N; i++) {
+			delete Cube[i];
+		}
+		delete Cube;
+	}
+
+	void printUnitCube() {
+		for (int i = 0; i < N; i++) {
+			for (int j = 0; j < n; j++) {
+				cout << Cube[i][j] << ' ';
+			}
+			cout << endl;
+		}
+		cout << endl;
+	}
+	void printUnit(int ind) {
+		for (int i = 0; i < n; i++) {
+			cout << Cube[ind][i] << " ";
+		}
+		cout << endl;
+	}
+};
+struct FunctionSet {
+	short** F;
+	int N, n;
+	FunctionSet(int N_, int n_) : N(N_), n(n_) {
+		F = new short*[N];
+		for (int i = 0; i < N; i++) {
+			F[i] = new short[n];
+		}
+	}
+	~FunctionSet() {
+		for (int i = 0; i < N; i++) {
+			delete F[i];
+		}
+		delete F;
+	}
+	void printFunctionSet() {
+		for (int i = 0; i < N; i++) {
+			for (int j = 0; j < n; j++) {
+				cout << F[i][j] << ' ';
+			}
+			cout << endl;
+		}
+		cout << endl;
+	}
+};
+UnitCube *unitCube = NULL;
+FunctionSet** functionSets = NULL;
+int factorial(int n) {
+	if (n == 0) {
+		return 1;
+	}
+	int res = 1;
+	for (int i = 2; i <= n; i++) {
+		res *= i;
+	}
+	return res;
+}
+int Cnk(int n, int k) {
+	return factorial(n) / (factorial(k)*factorial(n - k));
+}
+void printUnit(int* unit, int n) {
+	for (int i = 0; i < n; i++) {
+		cout << unit[i] << " ";
+	}
+	cout << endl;
+}
+
+void printSet(int* set, int size) {
+	cout << "Required set:\n";
+	for (int i = 0; i < size; i++) {
+		unitCube->printUnit(set[i]);
+	}
+	cout << endl;
+}
+//checks equacion of 2 units 
+bool equalUnit(short* first, short* second) {
+	for (int i = 0; i < unitCube->n; i++) {
+		if (first[i] != second[i]) {
+			return false;
+		}
+	}
+	return true;
+}
+
+// returns true, if unit isn't equal any in set
+bool compareSetUnit(short* unit, int ind) {
+	short** secondSet = functionSets[ind]->F;
+	for (int i = 0; i < unitCube->n - 1; i++) {
+		if (equalUnit(unit, secondSet[i])) {
+			return false;
+		}
+	}
+	return true;
+}
+
+//returns false, if there are repeated units in two sets
+bool notEqualSets(int first, int second) {
+	short** firstSet = functionSets[first]->F;
+	for (int i = 0; i < unitCube->n - 1; i++) {
+		if (!compareSetUnit(firstSet[i], second)) {
+			return false;
+		}
+	}
+	return true;
+}
+/*compare F[ind] with elements of set, 
+returns true, if ind element doesn't have intersection with any of the set*/
+bool compareSets(int* set, int ind, int size) {
+	for (int i = 0; i < size; i++) {
+		if (!notEqualSets(set[i], ind)) {
+			return false;
+		}
+	}
+	return true;
+}
+void collectSets() {
+	int* res = new int[unitCube->N];
+	int k;
+	//iterate over the Cube units, compare their sets.
+	for (int i = 0; i < unitCube->N - 1; i++) {
+		k = 0;
+		res[k++] = i;
+		for (int j = i + 1; j < unitCube->N; j++) {
+			if (compareSets(res, j, k)) {
+				res[k++] = j;
+			}
+		}
+		printSet(res, k);
+	}
+}
+void shiftByOne(short* unit, int n) {
+	int i = n - 1;
+	if (unit[n - 1] == 0) {
+		unit[n - 1] = 1;
+	}
+	else {
+		while (i >= 0 && unit[i] == 1) {
+			unit[i--] = 0;
+		}
+		unit[i] = 1;
+	}
+}
+int weightOf(short* unit, int n) {
+	int weight = 0;
+	for (int i = 0; i < n; i++) {
+		if (unit[i] == 1) {
+			weight++;
+		}
+	}
+	return weight;
+}
+
+void assignUnit(short* first, short* second, int size) {
+	for (int i = 0; i < size; i++) {
+		first[i] = second[i];
+	}
+}
+
+void constructUnitCube(UnitCube* cube) {
+	int index = 0;
+	int currWeight = 0;
+	short** unitCube = cube->Cube;
+	int n = cube->n;
+	int k = cube->k;
+	short* unit = new short[n];
+	for (int i = 0; i < n; i++) {
+		unit[i] = 0;
+	}
+	while (1) {
+		currWeight = weightOf(unit, n);
+		if (currWeight == k) {
+			assignUnit(unitCube[index++], unit, n);
+		}
+		if (currWeight == n) {
+			break;
+		}
+		shiftByOne(unit, n);
+	}
+}
+void createFunctionSet(int ind) {
+	int n = unitCube->n;
+	short** res = functionSets[ind]->F;
+	short** cube = unitCube->Cube;
+	for (int i = 0; i < n - 1; i++) {
+		for (int j = 0; j < n; j++) {
+			res[i][j] = cube[ind][j];
+		}
+		swap(res[i][i + 1], res[i][i]);
+	}
+}
+int main() {
+	int n, N, k;
+	cin >> n >> k;
+	while (k<1 || k>n) {
+		cout << "k must be greater than 1 and less than " << n << endl;
+		cout << "k: ";
+		cin >> k;
+	}
+	N = Cnk(n, k);
+	unitCube = new UnitCube(N, n, k);
+	functionSets = new FunctionSet*[N];
+	constructUnitCube(unitCube);
+	cout << endl;
+	cout << "Unit Cube:\n-------------\n";
+	unitCube->printUnitCube();
+	for (int i = 0; i < N; i++) {
+		functionSets[i] = new FunctionSet(n - 1, n);
+		createFunctionSet(i);
+		unitCube->printUnit(i);
+		cout << "*********" << endl;
+		functionSets[i]->printFunctionSet();
+		
+	}
+
+	collectSets();
+
+	for (int i = 0; i < N; i++) {
+		delete functionSets[i];
+	}
+
+	delete functionSets;
+	functionSets = NULL;
+	delete unitCube;
+	unitCube = NULL;
+	
+	system("pause");
+
+	return 0;
+}
